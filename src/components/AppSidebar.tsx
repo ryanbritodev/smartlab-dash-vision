@@ -1,5 +1,5 @@
-import { Home, Building2, FileText } from "lucide-react";
-import { NavLink } from "react-router-dom";
+import { LayoutDashboard, Building2, FileText, LogOut } from "lucide-react";
+import { NavLink, useNavigate } from "react-router-dom";
 import {
   Sidebar,
   SidebarContent,
@@ -9,15 +9,23 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarHeader,
+  SidebarFooter,
 } from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
 
 const items = [
-  { title: "Home", url: "/", icon: Home },
+  { title: "Dashboards", url: "/dashboard", icon: LayoutDashboard },
   { title: "Unidades", url: "/unidades", icon: Building2 },
   { title: "Relatórios", url: "/relatorios", icon: FileText },
 ];
 
 export function AppSidebar() {
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    navigate("/");
+  };
+
   return (
     <Sidebar className="border-r border-sidebar-border">
       <SidebarHeader className="p-6 border-b border-sidebar-border">
@@ -38,7 +46,7 @@ export function AppSidebar() {
                         `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                           isActive
                             ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium"
-                            : "text-sidebar-foreground hover:bg-sidebar-accent"
+                            : "text-sidebar-foreground/90 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                         }`
                       }
                     >
@@ -52,6 +60,17 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+
+      <SidebarFooter className="p-4 border-t border-sidebar-border">
+        <Button
+          onClick={handleLogout}
+          variant="ghost"
+          className="w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+        >
+          <LogOut className="h-5 w-5" />
+          <span>Sair</span>
+        </Button>
+      </SidebarFooter>
     </Sidebar>
   );
 }
