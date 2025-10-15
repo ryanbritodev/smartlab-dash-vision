@@ -42,7 +42,7 @@ const NotFound = () => {
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
           <button
             onClick={() => navigate(-1)}
-            className="flex items-center gap-2 bg-white text-[#1f88ca] px-6 py-3 rounded-lg font-semibold hover:bg-white/90 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+            className="flex items-center gap-2 bg-white text-[#1f88ca] px-6 py-3 rounded-lg font-semibold hover:bg-white/90 transition-all duration-200 shadow-lg hover:shadow-xl transform"
           >
             <ArrowLeft className="h-5 w-5" />
             Voltar
@@ -50,7 +50,7 @@ const NotFound = () => {
           
           <button
             onClick={() => navigate("/")}
-            className="flex items-center gap-2 bg-white/10 backdrop-blur-sm text-white border-2 border-white px-6 py-3 rounded-lg font-semibold hover:bg-white/20 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+            className="flex items-center gap-2 bg-white text-[#1f88ca] px-6 py-3 rounded-lg font-semibold hover:bg-white/90 transition-all duration-200 shadow-lg hover:shadow-xl transform "
           >
             <Home className="h-5 w-5" />
             Ir para Home
