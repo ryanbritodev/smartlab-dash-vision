@@ -17,7 +17,7 @@ const units = [
     id: 1,
     name: "Unidade A",
     location: "São Paulo - SP",
-    address: "Av. Paulista, 1000 - Bela Vista",
+    address: "Av. Paulista, 1100 - Bela Vista",
     dispensers: 15,
     status: "operational",
     temperature: "22°C",
@@ -29,8 +29,8 @@ const units = [
       { id: "D003", section: "Laboratório B", level: 20, status: "low" },
       { id: "D004", section: "Sala de Espera", level: 90, status: "ok" },
     ],
-    lastMaintenance: "15/09/2024",
-    nextMaintenance: "15/11/2024",
+    lastMaintenance: "15/09/2025",
+    nextMaintenance: "15/11/2025",
   },
   {
     id: 2,
@@ -47,8 +47,8 @@ const units = [
       { id: "D006", section: "Laboratório A", level: 50, status: "ok" },
       { id: "D007", section: "Laboratório B", level: 45, status: "ok" },
     ],
-    lastMaintenance: "20/09/2024",
-    nextMaintenance: "20/11/2024",
+    lastMaintenance: "20/09/2025",
+    nextMaintenance: "20/11/2025",
   },
   {
     id: 3,
@@ -65,8 +65,8 @@ const units = [
       { id: "D009", section: "Laboratório A", level: 35, status: "low" },
       { id: "D010", section: "Sala de Espera", level: 80, status: "ok" },
     ],
-    lastMaintenance: "10/09/2024",
-    nextMaintenance: "10/11/2024",
+    lastMaintenance: "10/09/2025",
+    nextMaintenance: "10/11/2025",
   },
 ];
 
@@ -169,7 +169,7 @@ const Unidades = () => {
           {selectedUnit && (
             <>
               <DialogHeader>
-                <DialogTitle className="text-2xl flex items-center justify-between">
+                <DialogTitle className="text-2xl flex items-center justify-between pr-5">
                   {selectedUnit.name}
                   <Badge
                     variant="outline"
@@ -261,10 +261,6 @@ const Unidades = () => {
                     </div>
                   </Card>
                 </div>
-              </div>
-
-              <div className="flex justify-end pt-4">
-                <Button onClick={() => setSelectedUnit(null)}>Fechar</Button>
               </div>
             </>
           )}
