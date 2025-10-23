@@ -7,7 +7,6 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
-import Unidades from "./pages/Unidades";
 import Relatorios from "./pages/Relatorios";
 import NotFound from "./pages/NotFound";
 
@@ -33,7 +32,6 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Login />} />
           <Route path="/dashboard" element={<DashboardLayout><Dashboard /></DashboardLayout>} />
-          <Route path="/unidades" element={<DashboardLayout><Unidades /></DashboardLayout>} />
           <Route path="/relatorios" element={<DashboardLayout><Relatorios /></DashboardLayout>} />
           <Route path="*" element={<NotFound />} />
         </Routes>

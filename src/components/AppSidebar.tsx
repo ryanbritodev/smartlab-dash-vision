@@ -1,4 +1,4 @@
-import { Building2, FileText, HomeIcon, LogOut } from "lucide-react";
+import { FileText, HomeIcon, LogOut } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   Sidebar,
@@ -15,7 +15,6 @@ import { Button } from "@/components/ui/button";
 
 const items = [
   { title: "Home", url: "/dashboard", icon: HomeIcon },
-  { title: "Unidades", url: "/unidades", icon: Building2 },
   { title: "Relatórios", url: "/relatorios", icon: FileText },
 ];
 

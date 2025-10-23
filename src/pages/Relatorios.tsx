@@ -206,21 +206,30 @@ const Relatorios = () => {
   };
 
   const handleGenerateReport = () => {
-    if (!reportType || !month || !unit) {
+    if (!month) {
       toast({
-        title: "Campos obrigatórios",
-        description: "Por favor, preencha todos os campos.",
+        title: "Campo obrigatório",
+        description: "Por favor, selecione um período.",
         variant: "destructive",
       });
       return;
     }
 
+    const periodLabels = {
+      "30min": "Últimos 30 minutos",
+      "1hora": "Última hora",
+      "24horas": "Últimas 24 horas",
+      "7dias": "Últimos 7 dias",
+      "30dias": "Últimos 30 dias",
+      "personalizado": "Período Personalizado"
+    };
+
     const newReport = {
-      title: `Relatório ${reportType} - ${month}`,
+      title: `Relatório de Retiradas - ${periodLabels[month]}`,
       date: new Date().toLocaleDateString("pt-BR"),
-      type: reportType,
+      type: "Histórico de Retiradas",
       size: `${(Math.random() * 3 + 1).toFixed(1)} MB`,
-      summary: `Relatório gerado automaticamente para ${month} contendo análise detalhada de ${reportType.toLowerCase()} na unidade ${unit}.`,
+      summary: `Relatório gerado automaticamente contendo análise detalhada do histórico de retiradas para o período: ${periodLabels[month]}.`,
       metrics: {
         totalDispensers: Math.floor(Math.random() * 200) + 800,
         consumoTotal: `${(Math.random() * 10 + 8).toFixed(3)} L`,
@@ -230,18 +239,16 @@ const Relatorios = () => {
         reducaoDesperdicio: `${(Math.random() * 10 + 10).toFixed(1)}%`
       },
       highlights: [
-        "Relatório gerado automaticamente pelo sistema",
+        "Relatório baseado no histórico de retiradas",
         "Dados consolidados em tempo real",
-        "Análise comparativa com período anterior"
+        "Análise por tipo de procedimento"
       ],
-      trends: "Os dados refletem o estado atual do sistema com métricas atualizadas automaticamente."
+      trends: "Os dados refletem o padrão de retiradas no período selecionado com métricas atualizadas automaticamente."
     };
 
     setReportsList([newReport, ...reportsList]);
     setOpen(false);
-    setReportType("");
     setMonth("");
-    setUnit("");
 
     toast({
       title: "Relatório gerado!",
@@ -405,52 +412,34 @@ const Relatorios = () => {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="type">Tipo de Relatório</Label>
-              <Select value={reportType} onValueChange={setReportType}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Consumo Geral">Consumo Geral</SelectItem>
-                  <SelectItem value="Manutenção">Manutenção</SelectItem>
-                  <SelectItem value="Performance">Performance</SelectItem>
-                  <SelectItem value="Eficiência">Eficiência</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="month">Período</Label>
+              <Label htmlFor="period">Período Temporal</Label>
               <Select value={month} onValueChange={setMonth}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione o mês" />
+                  <SelectValue placeholder="Selecione o período" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Outubro 2025">Outubro 2025</SelectItem>
-                  <SelectItem value="Setembro 2025">Setembro 2025</SelectItem>
-                  <SelectItem value="Agosto 2025">Agosto 2025</SelectItem>
-                  <SelectItem value="Julho 2025">Julho 2025</SelectItem>
-                  <SelectItem value="Junho 2025">Junho 2025</SelectItem>
-                  <SelectItem value="Maio 2025">Maio 2025</SelectItem>
+                  <SelectItem value="30min">Últimos 30 minutos</SelectItem>
+                  <SelectItem value="1hora">Última hora</SelectItem>
+                  <SelectItem value="24horas">Últimas 24 horas</SelectItem>
+                  <SelectItem value="7dias">Últimos 7 dias</SelectItem>
+                  <SelectItem value="30dias">Últimos 30 dias</SelectItem>
+                  <SelectItem value="personalizado">Período Personalizado</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="unit">Unidade</Label>
-              <Select value={unit} onValueChange={setUnit}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione a unidade" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Todas">Todas as Unidades</SelectItem>
-                  <SelectItem value="Centro">SmartLab Centro</SelectItem>
-                  <SelectItem value="Norte">SmartLab Norte</SelectItem>
-                  <SelectItem value="Sul">SmartLab Sul</SelectItem>
-                  <SelectItem value="Leste">SmartLab Leste</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {month === "personalizado" && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="startDate">Data Início</Label>
+                  <Input type="date" id="startDate" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="endDate">Data Fim</Label>
+                  <Input type="date" id="endDate" />
+                </div>
+              </div>
+            )}
           </div>
           <div className="flex justify-end gap-3">
             <Button 
