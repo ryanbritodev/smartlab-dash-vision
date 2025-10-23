@@ -1,7 +1,8 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Download, Calendar, Eye, BarChart3, TrendingUp, Users, Clock } from "lucide-react";
+import { FileText, Download, Calendar, Eye, User, Package, Clock } from "lucide-react";
 import { useState } from "react";
+import { historicoData } from "@/components/HistoricoRetiradas";
 import {
   Dialog,
   DialogContent,
@@ -22,95 +23,32 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
 
-const reports = [
+const initialReports = [
   {
-    title: "Relatório Mensal - Junho 2025",
-    date: "01/07/2025",
-    type: "Consumo Geral",
-    size: "2.4 MB",
-    summary: "Análise completa do consumo de insumos laboratoriais com foco em eficiência e redução de desperdícios.",
-    metrics: {
-      totalDispensers: 847,
-      consumoTotal: "12.450 L",
-      disponibilidade: "98.5%",
-      tempoResposta: "2.3 horas",
-      economia: "R$ 45.230,00",
-      reducaoDesperdicio: "15.2%"
-    },
-    highlights: [
-      "Redução de 15% no consumo de reagentes",
-      "Aumento de 12% na eficiência operacional",
-      "3 dispensers com manutenção preventiva realizada"
-    ],
-    trends: "Melhoria consistente nos indicadores de eficiência com destaque para redução no tempo de resposta."
+    title: "Relatório de Retiradas - Últimos 30 dias",
+    date: "23/10/2025",
+    type: "Histórico de Retiradas",
+    periodo: "Últimos 30 dias",
+    retiradas: historicoData.slice(0, 5),
   },
   {
-    title: "Relatório Mensal - Maio 2025",
-    date: "01/06/2025",
-    type: "Consumo Geral",
-    size: "2.1 MB",
-    summary: "Relatório mensal com análise comparativa e identificação de oportunidades de otimização.",
-    metrics: {
-      totalDispensers: 832,
-      consumoTotal: "13.150 L",
-      disponibilidade: "97.8%",
-      tempoResposta: "2.7 horas",
-      economia: "R$ 38.450,00",
-      reducaoDesperdicio: "13.5%"
-    },
-    highlights: [
-      "Implementação de novo protocolo de consumo",
-      "Treinamento de equipe concluído",
-      "2 dispensers novos instalados"
-    ],
-    trends: "Crescimento positivo na adoção de boas práticas com redução gradual de desperdícios."
+    title: "Relatório de Retiradas - Últimos 7 dias",
+    date: "23/10/2025",
+    type: "Histórico de Retiradas",
+    periodo: "Últimos 7 dias",
+    retiradas: historicoData.slice(0, 3),
   },
   {
-    title: "Análise de Dispensers - Q2 2025",
-    date: "15/06/2025",
-    type: "Manutenção",
-    size: "1.8 MB",
-    summary: "Relatório técnico de manutenção preventiva e corretiva dos dispensers do sistema.",
-    metrics: {
-      totalDispensers: 847,
-      consumoTotal: "8.920 L",
-      disponibilidade: "99.1%",
-      tempoResposta: "1.8 horas",
-      economia: "R$ 28.750,00",
-      reducaoDesperdicio: "18.7%"
-    },
-    highlights: [
-      "15 manutenções preventivas realizadas",
-      "Taxa de disponibilidade acima da meta",
-      "Zero paradas não programadas"
-    ],
-    trends: "Alta confiabilidade do sistema com manutenção proativa mostrando resultados positivos."
+    title: "Relatório de Retiradas - Últimas 24 horas",
+    date: "23/10/2025",
+    type: "Histórico de Retiradas",
+    periodo: "Últimas 24 horas",
+    retiradas: historicoData.slice(0, 2),
   },
-  {
-    title: "Relatório de Eficiência - Abril 2025",
-    date: "01/05/2025",
-    type: "Performance",
-    size: "3.2 MB",
-    summary: "Análise de performance operacional com métricas de eficiência e produtividade.",
-    metrics: {
-      totalDispensers: 820,
-      consumoTotal: "14.230 L",
-      disponibilidade: "96.3%",
-      tempoResposta: "3.1 horas",
-      economia: "R$ 32.180,00",
-      reducaoDesperdicio: "11.8%"
-    },
-    highlights: [
-      "Otimização de rotas de manutenção",
-      "Atualização de firmware em 45 dispensers",
-      "Redução de 20% no tempo de resposta"
-    ],
-    trends: "Melhoria progressiva nos indicadores de performance após implementação de melhorias."
-  }
 ];
 
 const Relatorios = () => {
-  const [reportsList, setReportsList] = useState(reports);
+  const [reportsList, setReportsList] = useState(initialReports);
   const [open, setOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
@@ -145,50 +83,73 @@ const Relatorios = () => {
     doc.setFontSize(10);
     doc.setTextColor(100, 100, 100);
     doc.text(`Data de Geração: ${report.date}`, 20, 55);
-    doc.text(`Tipo: ${report.type}`, 20, 62);
+    doc.text(`Período: ${report.periodo}`, 20, 62);
+    doc.text(`Tipo: ${report.type}`, 20, 69);
     
     // Content sections
     doc.setFontSize(16);
     doc.setTextColor(0, 0, 0);
-    doc.text("Resumo Executivo", 20, 80);
+    doc.text("Histórico de Retiradas", 20, 85);
     
-    doc.setFontSize(11);
+    doc.setFontSize(10);
     doc.setTextColor(60, 60, 60);
-    const summaryText = report.summary;
-    doc.text(summaryText, 20, 90, { maxWidth: 170 });
+    doc.text(`Total de Retiradas no Período: ${report.retiradas.length}`, 20, 95);
     
-    // Mock data section
-    doc.setFontSize(14);
+    // Table header
+    let yPosition = 110;
+    doc.setFillColor(240, 240, 240);
+    doc.rect(20, yPosition - 5, 170, 8, "F");
+    
+    doc.setFontSize(9);
     doc.setTextColor(0, 0, 0);
-    doc.text("Principais Indicadores", 20, 115);
+    doc.setFont(undefined, 'bold');
+    doc.text("Funcionário/ID", 22, yPosition);
+    doc.text("Itens", 80, yPosition);
+    doc.text("Procedimento", 130, yPosition);
+    doc.text("Horário", 165, yPosition);
     
-    doc.setFontSize(11);
-    doc.setTextColor(60, 60, 60);
+    yPosition += 10;
+    doc.setFont(undefined, 'normal');
     
-    const metrics = [
-      `• Total de Dispensers Ativos: ${report.metrics.totalDispensers}`,
-      `• Consumo Total do Período: ${report.metrics.consumoTotal}`,
-      `• Taxa de Disponibilidade: ${report.metrics.disponibilidade}`,
-      `• Tempo Médio de Resposta: ${report.metrics.tempoResposta}`,
-      `• Economia Gerada: ${report.metrics.economia}`,
-      `• Redução de Desperdício: ${report.metrics.reducaoDesperdicio}`
-    ];
-    
-    let yPosition = 125;
-    metrics.forEach(metric => {
-      doc.text(metric, 25, yPosition);
-      yPosition += 8;
+    // Table content
+    report.retiradas.forEach((retirada, index) => {
+      if (yPosition > 260) {
+        doc.addPage();
+        yPosition = 20;
+      }
+      
+      doc.setFontSize(8);
+      doc.setTextColor(60, 60, 60);
+      
+      // Funcionário
+      doc.text(retirada.funcionarioNome, 22, yPosition);
+      doc.setFontSize(7);
+      doc.setTextColor(120, 120, 120);
+      doc.text(retirada.funcionarioId, 22, yPosition + 4);
+      
+      // Itens
+      doc.setFontSize(8);
+      doc.setTextColor(60, 60, 60);
+      const allItems = [retirada.item, ...retirada.itensAdicionais];
+      const itemsText = allItems.length > 1 ? `${retirada.item} +${retirada.itensAdicionais.length}` : retirada.item;
+      doc.text(itemsText, 80, yPosition, { maxWidth: 45 });
+      
+      // Procedimento
+      doc.text(retirada.procedimento, 130, yPosition, { maxWidth: 30 });
+      
+      // Horário
+      doc.text(retirada.horario, 165, yPosition);
+      doc.setFontSize(7);
+      doc.setTextColor(120, 120, 120);
+      doc.text(retirada.data, 165, yPosition + 4);
+      
+      yPosition += 12;
+      
+      // Separator line
+      doc.setDrawColor(220, 220, 220);
+      doc.line(20, yPosition - 2, 190, yPosition - 2);
+      yPosition += 3;
     });
-    
-    // Analysis section
-    doc.setFontSize(14);
-    doc.setTextColor(0, 0, 0);
-    doc.text("Análise de Tendências", 20, yPosition + 10);
-    
-    doc.setFontSize(11);
-    doc.setTextColor(60, 60, 60);
-    const analysisText = report.trends;
-    doc.text(analysisText, 20, yPosition + 20, { maxWidth: 170 });
     
     // Footer
     doc.setFontSize(8);
@@ -224,26 +185,32 @@ const Relatorios = () => {
       "personalizado": "Período Personalizado"
     };
 
+    // Filtrar retiradas baseado no período (aqui simulamos com quantidade de registros)
+    let filteredRetiradas = [...historicoData];
+    
+    switch(month) {
+      case "30min":
+      case "1hora":
+        filteredRetiradas = historicoData.slice(0, 1);
+        break;
+      case "24horas":
+        filteredRetiradas = historicoData.slice(0, 2);
+        break;
+      case "7dias":
+        filteredRetiradas = historicoData.slice(0, 3);
+        break;
+      case "30dias":
+      case "personalizado":
+        filteredRetiradas = historicoData;
+        break;
+    }
+
     const newReport = {
       title: `Relatório de Retiradas - ${periodLabels[month]}`,
       date: new Date().toLocaleDateString("pt-BR"),
       type: "Histórico de Retiradas",
-      size: `${(Math.random() * 3 + 1).toFixed(1)} MB`,
-      summary: `Relatório gerado automaticamente contendo análise detalhada do histórico de retiradas para o período: ${periodLabels[month]}.`,
-      metrics: {
-        totalDispensers: Math.floor(Math.random() * 200) + 800,
-        consumoTotal: `${(Math.random() * 10 + 8).toFixed(3)} L`,
-        disponibilidade: `${(Math.random() * 5 + 95).toFixed(1)}%`,
-        tempoResposta: `${(Math.random() * 2 + 1.5).toFixed(1)} horas`,
-        economia: `R$ ${(Math.random() * 30000 + 20000).toFixed(2)}`,
-        reducaoDesperdicio: `${(Math.random() * 10 + 10).toFixed(1)}%`
-      },
-      highlights: [
-        "Relatório baseado no histórico de retiradas",
-        "Dados consolidados em tempo real",
-        "Análise por tipo de procedimento"
-      ],
-      trends: "Os dados refletem o padrão de retiradas no período selecionado com métricas atualizadas automaticamente."
+      periodo: periodLabels[month],
+      retiradas: filteredRetiradas,
     };
 
     setReportsList([newReport, ...reportsList]);
@@ -289,89 +256,118 @@ const Relatorios = () => {
                       {selectedReport.type}
                     </span>
                     <span>•</span>
-                    <span>{selectedReport.size}</span>
+                    <span className="text-gray-600">Período: {selectedReport.periodo}</span>
                   </div>
                 </div>
               </div>
-              <p className="text-gray-700 leading-relaxed">{selectedReport.summary}</p>
+              <p className="text-gray-700 leading-relaxed">
+                Relatório detalhado do histórico de retiradas de materiais, incluindo informações de funcionários, itens, procedimentos e horários.
+              </p>
             </div>
 
-            {/* Métricas Principais */}
+            {/* Estatísticas Resumidas */}
             <div>
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <BarChart3 className="h-5 w-5 text-green-600" />
-                Principais Indicadores
-              </h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <h3 className="text-lg font-semibold mb-4">Resumo do Período</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-white p-4 rounded-lg border shadow-sm">
                   <div className="flex items-center gap-2 mb-2">
-                    <Users className="h-4 w-4 text-blue-600" />
-                    <span className="text-sm font-medium text-gray-600">Dispensers Ativos</span>
+                    <FileText className="h-4 w-4 text-blue-600" />
+                    <span className="text-sm font-medium text-gray-600">Total de Retiradas</span>
                   </div>
-                  <p className="text-2xl font-bold text-gray-900">{selectedReport.metrics.totalDispensers}</p>
-                </div>
-                
-                <div className="bg-white p-4 rounded-lg border shadow-sm">
-                  <div className="flex items-center gap-2 mb-2">
-                    <TrendingUp className="h-4 w-4 text-green-600" />
-                    <span className="text-sm font-medium text-gray-600">Consumo Total</span>
-                  </div>
-                  <p className="text-2xl font-bold text-gray-900">{selectedReport.metrics.consumoTotal}</p>
+                  <p className="text-2xl font-bold text-gray-900">{selectedReport.retiradas.length}</p>
                 </div>
                 
                 <div className="bg-white p-4 rounded-lg border shadow-sm">
                   <div className="flex items-center gap-2 mb-2">
-                    <Clock className="h-4 w-4 text-purple-600" />
-                    <span className="text-sm font-medium text-gray-600">Disponibilidade</span>
+                    <User className="h-4 w-4 text-green-600" />
+                    <span className="text-sm font-medium text-gray-600">Funcionários</span>
                   </div>
-                  <p className="text-2xl font-bold text-gray-900">{selectedReport.metrics.disponibilidade}</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {new Set(selectedReport.retiradas.map(r => r.funcionarioId)).size}
+                  </p>
                 </div>
                 
                 <div className="bg-white p-4 rounded-lg border shadow-sm">
-                  <span className="text-sm font-medium text-gray-600">Tempo de Resposta</span>
-                  <p className="text-2xl font-bold text-gray-900">{selectedReport.metrics.tempoResposta}</p>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Package className="h-4 w-4 text-purple-600" />
+                    <span className="text-sm font-medium text-gray-600">Total de Itens</span>
+                  </div>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {selectedReport.retiradas.reduce((acc, r) => acc + 1 + r.itensAdicionais.length, 0)}
+                  </p>
                 </div>
                 
                 <div className="bg-white p-4 rounded-lg border shadow-sm">
-                  <span className="text-sm font-medium text-gray-600">Economia Gerada</span>
-                  <p className="text-2xl font-bold text-gray-900">{selectedReport.metrics.economia}</p>
-                </div>
-                
-                <div className="bg-white p-4 rounded-lg border shadow-sm">
-                  <span className="text-sm font-medium text-gray-600">Redução de Desperdício</span>
-                  <p className="text-2xl font-bold text-gray-900">{selectedReport.metrics.reducaoDesperdicio}</p>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Clock className="h-4 w-4 text-orange-600" />
+                    <span className="text-sm font-medium text-gray-600">Procedimentos</span>
+                  </div>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {new Set(selectedReport.retiradas.map(r => r.procedimento)).size}
+                  </p>
                 </div>
               </div>
             </div>
 
-            {/* Destaques */}
+            {/* Tabela de Retiradas */}
             <div>
-              <h3 className="text-lg font-semibold mb-4">Destaques do Período</h3>
-              <div className="space-y-3">
-                {selectedReport.highlights.map((highlight, index) => (
-                  <div key={index} className="flex items-start gap-3 p-3 bg-green-50 rounded-lg border border-green-200">
-                    <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
-                    <span className="text-gray-700">{highlight}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Tendências */}
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Análise de Tendências</h3>
-              <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-                <p className="text-gray-700">{selectedReport.trends}</p>
+              <h3 className="text-lg font-semibold mb-4">Detalhamento das Retiradas</h3>
+              <div className="border rounded-lg overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-muted">
+                      <tr className="border-b">
+                        <th className="px-4 py-3 text-left text-sm font-medium">Funcionário/ID</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium">Itens</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium">Procedimento</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium">Horário</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y bg-white">
+                      {selectedReport.retiradas.map((retirada, index) => (
+                        <tr key={index} className="hover:bg-muted/50">
+                          <td className="px-4 py-3">
+                            <div>
+                              <p className="font-medium text-gray-900">{retirada.funcionarioNome}</p>
+                              <p className="text-sm text-gray-600">{retirada.funcionarioId}</p>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div>
+                              <p className="text-gray-900">{retirada.item}</p>
+                              {retirada.itensAdicionais.length > 0 && (
+                                <p className="text-sm text-gray-600">
+                                  +{retirada.itensAdicionais.length} {retirada.itensAdicionais.length === 1 ? 'item adicional' : 'itens adicionais'}
+                                </p>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              {retirada.procedimento}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div>
+                              <p className="font-medium text-gray-900">{retirada.horario}</p>
+                              <p className="text-xs text-gray-600">{retirada.data}</p>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
 
             {/* Ações */}
-            <div className="flex justify-end gap-3 pt-4 border-t ">
+            <div className="flex justify-end gap-3 pt-4 border-t">
               <Button variant="outline" className="hover:bg-primary/10 hover:text-primary" onClick={() => setPreviewOpen(false)}>
                 Fechar
               </Button>
               <Button 
-                className="gap-2 " 
+                className="gap-2" 
                 onClick={() => {
                   handleDownloadReport(selectedReport);
                   setPreviewOpen(false);
@@ -480,7 +476,7 @@ const Relatorios = () => {
                     <span>•</span>
                     <span>{report.type}</span>
                     <span>•</span>
-                    <span>{report.size}</span>
+                    <span>{report.retiradas.length} retiradas</span>
                   </div>
                 </div>
               </div>
