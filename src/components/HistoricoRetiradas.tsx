@@ -8,6 +8,14 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 
+// Função auxiliar para criar timestamps realistas
+const createTimestamp = (minutesAgo: number) => {
+  const now = new Date();
+  const timestamp = new Date(now.getTime() - minutesAgo * 60000);
+  return timestamp;
+};
+
+// Dados com timestamps reais
 export const historicoData = [
   {
     funcionarioId: "F-2341",
@@ -17,6 +25,7 @@ export const historicoData = [
     procedimento: "Cirurgia Cardíaca",
     horario: "14:32",
     data: "23/10/2025",
+    timestamp: createTimestamp(15), // 15 minutos atrás
     observacoes: "Procedimento de alta complexidade. Materiais estéreis verificados antes da retirada.",
     setor: "Centro Cirúrgico - Sala 3",
   },
@@ -28,6 +37,7 @@ export const historicoData = [
     procedimento: "Coleta de Sangue",
     horario: "13:15",
     data: "23/10/2025",
+    timestamp: createTimestamp(45), // 45 minutos atrás
     observacoes: "Coleta de rotina para exames laboratoriais.",
     setor: "Laboratório - Sala 1",
   },
@@ -39,6 +49,7 @@ export const historicoData = [
     procedimento: "Cateterismo",
     horario: "12:48",
     data: "23/10/2025",
+    timestamp: createTimestamp(180), // 3 horas atrás
     observacoes: "Procedimento programado. Paciente preparado conforme protocolo.",
     setor: "Hemodinâmica",
   },
@@ -50,6 +61,7 @@ export const historicoData = [
     procedimento: "Triagem",
     horario: "11:20",
     data: "23/10/2025",
+    timestamp: createTimestamp(720), // 12 horas atrás
     observacoes: "Triagem de urgência. Equipamento higienizado após uso.",
     setor: "Pronto Socorro",
   },
@@ -61,14 +73,75 @@ export const historicoData = [
     procedimento: "UTI - Emergência",
     horario: "10:05",
     data: "23/10/2025",
+    timestamp: createTimestamp(2880), // 2 dias atrás
     observacoes: "Emergência respiratória. Kit completo utilizado conforme protocolo de segurança.",
     setor: "UTI - Leito 12",
+  },
+  {
+    funcionarioId: "F-3456",
+    funcionarioNome: "Enf. Roberto Lima",
+    item: "Bandagem Elástica",
+    itensAdicionais: ["Tesoura Cirúrgica"],
+    procedimento: "Curativos",
+    horario: "09:30",
+    data: "20/10/2025",
+    timestamp: createTimestamp(4320), // 3 dias atrás
+    observacoes: "Troca de curativos em paciente pós-operatório.",
+    setor: "Enfermaria - Leito 5",
+  },
+  {
+    funcionarioId: "F-1234",
+    funcionarioNome: "Dr. Fernando Alves",
+    item: "Estetoscópio",
+    itensAdicionais: [],
+    procedimento: "Consulta",
+    horario: "08:15",
+    data: "15/10/2025",
+    timestamp: createTimestamp(10080), // 7 dias atrás
+    observacoes: "Consulta de rotina ambulatorial.",
+    setor: "Ambulatório 2",
+  },
+  {
+    funcionarioId: "F-5678",
+    funcionarioNome: "Enf. Juliana Costa",
+    item: "Soro Fisiológico",
+    itensAdicionais: ["Equipo", "Agulha"],
+    procedimento: "Hidratação",
+    horario: "16:45",
+    data: "10/10/2025",
+    timestamp: createTimestamp(17280), // 12 dias atrás
+    observacoes: "Hidratação venosa em paciente desidratado.",
+    setor: "Pronto Socorro",
+  },
+  {
+    funcionarioId: "F-9012",
+    funcionarioNome: "Dr. Marcelo Santos",
+    item: "Otoscópio",
+    itensAdicionais: [],
+    procedimento: "Exame Otológico",
+    horario: "10:20",
+    data: "01/10/2025",
+    timestamp: createTimestamp(30240), // 21 dias atrás
+    observacoes: "Exame de rotina para diagnóstico de otite.",
+    setor: "Consultório 3",
+  },
+  {
+    funcionarioId: "F-3344",
+    funcionarioNome: "Enf. Patricia Souza",
+    item: "Oxímetro",
+    itensAdicionais: ["Termômetro"],
+    procedimento: "Monitoramento",
+    horario: "14:00",
+    data: "25/09/2025",
+    timestamp: createTimestamp(39600), // 27.5 dias atrás
+    observacoes: "Monitoramento de sinais vitais em paciente crítico.",
+    setor: "UTI - Leito 8",
   },
 ];
 
 export function HistoricoRetiradas() {
   const [expandedRows, setExpandedRows] = useState<number[]>([]);
-
+  
   const toggleRow = (index: number) => {
     setExpandedRows(prev => 
       prev.includes(index) 
@@ -76,11 +149,11 @@ export function HistoricoRetiradas() {
         : [...prev, index]
     );
   };
-
+  
   const getAllItems = (registro: typeof historicoData[0]) => {
     return [registro.item, ...registro.itensAdicionais];
   };
-
+  
   return (
     <Card className="p-6">
       <h3 className="text-lg font-semibold text-card-foreground mb-4">Histórico de Retiradas</h3>
@@ -163,14 +236,6 @@ export function HistoricoRetiradas() {
                                 ))}
                               </ul>
                             </div>
-                            <div>
-                              <p className="text-sm font-semibold text-foreground mb-2">Setor:</p>
-                              <p className="text-sm text-muted-foreground">{registro.setor}</p>
-                            </div>
-                          </div>
-                          <div>
-                            <p className="text-sm font-semibold text-foreground mb-2">Observações:</p>
-                            <p className="text-sm text-muted-foreground">{registro.observacoes}</p>
                           </div>
                         </div>
                       </td>

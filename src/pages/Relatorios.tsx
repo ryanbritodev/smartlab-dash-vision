@@ -23,27 +23,40 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
 
+// Função para filtrar dados por período
+const filterByPeriod = (data: typeof historicoData, days: number) => {
+  const now = new Date();
+  return data.filter(r => {
+    const diffDays = (now.getTime() - r.timestamp.getTime()) / 86400000;
+    return diffDays <= days;
+  }).sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+};
+
 const initialReports = [
   {
     title: "Relatório de Retiradas - Últimos 30 dias",
     date: "23/10/2025",
     type: "Histórico de Retiradas",
     periodo: "Últimos 30 dias",
-    retiradas: historicoData.slice(0, 5),
+    retiradas: filterByPeriod(historicoData, 30),
   },
   {
     title: "Relatório de Retiradas - Últimos 7 dias",
     date: "23/10/2025",
     type: "Histórico de Retiradas",
     periodo: "Últimos 7 dias",
-    retiradas: historicoData.slice(0, 3),
+    retiradas: filterByPeriod(historicoData, 7),
   },
   {
     title: "Relatório de Retiradas - Últimas 24 horas",
     date: "23/10/2025",
     type: "Histórico de Retiradas",
     periodo: "Últimas 24 horas",
-    retiradas: historicoData.slice(0, 2),
+    retiradas: historicoData.filter(r => {
+      const now = new Date();
+      const diffHours = (now.getTime() - r.timestamp.getTime()) / 3600000;
+      return diffHours <= 24;
+    }).sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()),
   },
 ];
 
@@ -55,6 +68,8 @@ const Relatorios = () => {
   const [reportType, setReportType] = useState("");
   const [month, setMonth] = useState("");
   const [unit, setUnit] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const { toast } = useToast();
 
   const handlePreviewReport = (report) => {
@@ -176,6 +191,16 @@ const Relatorios = () => {
       return;
     }
 
+    // Validação para período personalizado
+    if (month === "personalizado" && (!startDate || !endDate)) {
+      toast({
+        title: "Datas obrigatórias",
+        description: "Por favor, selecione as datas de início e fim.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const periodLabels = {
       "30min": "Últimos 30 minutos",
       "1hora": "Última hora",
@@ -184,42 +209,82 @@ const Relatorios = () => {
       "30dias": "Últimos 30 dias",
       "personalizado": "Período Personalizado"
     };
-
-    // Filtrar retiradas baseado no período (aqui simulamos com quantidade de registros)
+    
+    // Filtragem dinâmica baseada em timestamps reais
+    const now = new Date();
     let filteredRetiradas = [...historicoData];
     
     switch(month) {
-      case "30min":
-      case "1hora":
-        filteredRetiradas = historicoData.slice(0, 1);
+      case "30min": {
+        filteredRetiradas = historicoData.filter(r => {
+          const diffMinutes = (now.getTime() - r.timestamp.getTime()) / 60000;
+          return diffMinutes <= 30;
+        });
         break;
-      case "24horas":
-        filteredRetiradas = historicoData.slice(0, 2);
+      }
+      case "1hora": {
+        filteredRetiradas = historicoData.filter(r => {
+          const diffMinutes = (now.getTime() - r.timestamp.getTime()) / 60000;
+          return diffMinutes <= 60;
+        });
         break;
-      case "7dias":
-        filteredRetiradas = historicoData.slice(0, 3);
+      }
+      case "24horas": {
+        filteredRetiradas = historicoData.filter(r => {
+          const diffHours = (now.getTime() - r.timestamp.getTime()) / 3600000;
+          return diffHours <= 24;
+        });
         break;
-      case "30dias":
-      case "personalizado":
-        filteredRetiradas = historicoData;
+      }
+      case "7dias": {
+        filteredRetiradas = historicoData.filter(r => {
+          const diffDays = (now.getTime() - r.timestamp.getTime()) / 86400000;
+          return diffDays <= 7;
+        });
         break;
+      }
+      case "30dias": {
+        filteredRetiradas = historicoData.filter(r => {
+          const diffDays = (now.getTime() - r.timestamp.getTime()) / 86400000;
+          return diffDays <= 30;
+        });
+        break;
+      }
+      case "personalizado": {
+        // Filtragem por período customizado
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999); // Inclui o dia inteiro
+        
+        filteredRetiradas = historicoData.filter(r => {
+          return r.timestamp >= start && r.timestamp <= end;
+        });
+        break;
+      }
     }
-
+    
+    // Ordena por timestamp mais recente primeiro
+    filteredRetiradas.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+    
     const newReport = {
       title: `Relatório de Retiradas - ${periodLabels[month]}`,
       date: new Date().toLocaleDateString("pt-BR"),
       type: "Histórico de Retiradas",
-      periodo: periodLabels[month],
+      periodo: month === "personalizado" 
+        ? `${new Date(startDate).toLocaleDateString("pt-BR")} - ${new Date(endDate).toLocaleDateString("pt-BR")}`
+        : periodLabels[month],
       retiradas: filteredRetiradas,
     };
-
+    
     setReportsList([newReport, ...reportsList]);
     setOpen(false);
     setMonth("");
-
+    setStartDate("");
+    setEndDate("");
+    
     toast({
       title: "Relatório gerado!",
-      description: "O relatório foi gerado com sucesso e está disponível para download.",
+      description: `${filteredRetiradas.length} retirada(s) encontrada(s) no período selecionado.`,
     });
   };
 
@@ -235,7 +300,6 @@ const Relatorios = () => {
             Visualize os detalhes do relatório antes de fazer o download
           </DialogDescription>
         </DialogHeader>
-
         {selectedReport && (
           <div className="space-y-6 py-4">
             {/* Cabeçalho */}
@@ -391,7 +455,7 @@ const Relatorios = () => {
           <p className="text-muted-foreground">Acesse, visualize e baixe relatórios detalhados do sistema</p>
         </div>
         
-       {/* Diálogo de Gerar Novo Relatório (original mantido) */}
+       {/* Diálogo de Gerar Novo Relatório */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
           <Button size="lg" className="gap-2">
@@ -423,16 +487,25 @@ const Relatorios = () => {
                 </SelectContent>
               </Select>
             </div>
-
             {month === "personalizado" && (
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="startDate">Data Início</Label>
-                  <Input type="date" id="startDate" />
+                  <Input 
+                    type="date" 
+                    id="startDate" 
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="endDate">Data Fim</Label>
-                  <Input type="date" id="endDate" />
+                  <Input 
+                    type="date" 
+                    id="endDate" 
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                  />
                 </div>
               </div>
             )}
