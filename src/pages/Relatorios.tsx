@@ -1,8 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FileText, Download, Calendar, Eye, User, Package, Clock } from "lucide-react";
-import { useState } from "react";
-import { historicoData } from "@/components/HistoricoRetiradas";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -23,61 +22,240 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
 
-// Função para filtrar dados por período
-const filterByPeriod = (data: typeof historicoData, days: number) => {
-  const now = new Date();
-  return data.filter(r => {
-    const diffDays = (now.getTime() - r.timestamp.getTime()) / 86400000;
-    return diffDays <= days;
-  }).sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-};
+// ===== TIPOS E INTERFACES =====
 
-const initialReports = [
+interface ProcedureItem {
+  id: string;
+  name: string;
+  quantity: number;
+}
+
+interface Procedure {
+  id: string;
+  name: string;
+  items: ProcedureItem[];
+}
+
+interface WithdrawalRecord {
+  employeeId: string;
+  employeeName?: string;
+  procedure: Procedure;
+  timestamp: string;
+}
+
+// Tipo adaptado para compatibilidade com o formato antigo
+interface HistoricoDataItem {
+  funcionarioId: string;
+  funcionarioNome: string;
+  item: string;
+  itensAdicionais: string[];
+  procedimento: string;
+  horario: string;
+  data: string;
+  timestamp: Date;
+}
+
+interface Report {
+  title: string;
+  date: string;
+  type: string;
+  periodo: string;
+  retiradas: HistoricoDataItem[];
+}
+
+// ===== DADOS MOCKADOS =====
+
+const mockWithdrawals: WithdrawalRecord[] = [
   {
-    title: "Relatório de Retiradas - Últimos 30 dias",
-    date: "23/10/2025",
-    type: "Histórico de Retiradas",
-    periodo: "Últimos 30 dias",
-    retiradas: filterByPeriod(historicoData, 30),
+    employeeId: "F-2341",
+    employeeName: "Dr. João Silva",
+    procedure: {
+      id: "P-1001",
+      name: "Cirurgia Cardíaca",
+      items: [
+        { id: "I-001", name: "Luvas Cirúrgicas", quantity: 2 },
+        { id: "I-002", name: "Máscara N95", quantity: 1 },
+        { id: "I-003", name: "Álcool Gel", quantity: 1 }
+      ]
+    },
+    timestamp: new Date(Date.now() - 15 * 60000).toISOString()
   },
   {
-    title: "Relatório de Retiradas - Últimos 7 dias",
-    date: "23/10/2025",
-    type: "Histórico de Retiradas",
-    periodo: "Últimos 7 dias",
-    retiradas: filterByPeriod(historicoData, 7),
+    employeeId: "F-1892",
+    employeeName: "Enf. Maria Santos",
+    procedure: {
+      id: "P-2002",
+      name: "Coleta de Sangue",
+      items: [
+        { id: "I-004", name: "Seringa 10ml", quantity: 3 }
+      ]
+    },
+    timestamp: new Date(Date.now() - 45 * 60000).toISOString()
   },
   {
-    title: "Relatório de Retiradas - Últimas 24 horas",
-    date: "23/10/2025",
-    type: "Histórico de Retiradas",
-    periodo: "Últimas 24 horas",
-    retiradas: historicoData.filter(r => {
-      const now = new Date();
-      const diffHours = (now.getTime() - r.timestamp.getTime()) / 3600000;
-      return diffHours <= 24;
-    }).sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()),
+    employeeId: "F-3021",
+    employeeName: "Dr. Pedro Costa",
+    procedure: {
+      id: "P-3003",
+      name: "Cateterismo",
+      items: [
+        { id: "I-005", name: "Cateter", quantity: 1 },
+        { id: "I-006", name: "Gaze Estéril", quantity: 5 },
+        { id: "I-007", name: "Esparadrapo", quantity: 1 }
+      ]
+    },
+    timestamp: new Date(Date.now() - 180 * 60000).toISOString()
   },
+  {
+    employeeId: "F-2156",
+    employeeName: "Enf. Ana Paula",
+    procedure: {
+      id: "P-4004",
+      name: "Triagem",
+      items: [
+        { id: "I-008", name: "Termômetro Digital", quantity: 1 }
+      ]
+    },
+    timestamp: new Date(Date.now() - 720 * 60000).toISOString()
+  },
+  {
+    employeeId: "F-2789",
+    employeeName: "Dr. Carlos Oliveira",
+    procedure: {
+      id: "P-5005",
+      name: "UTI - Emergência",
+      items: [
+        { id: "I-009", name: "Kit Intubação", quantity: 1 },
+        { id: "I-010", name: "Tubo Endotraqueal", quantity: 1 },
+        { id: "I-011", name: "Laringoscópio", quantity: 1 },
+        { id: "I-012", name: "Fio Guia", quantity: 1 }
+      ]
+    },
+    timestamp: new Date(Date.now() - 2880 * 60000).toISOString()
+  },
+  {
+    employeeId: "F-3456",
+    employeeName: "Enf. Roberto Lima",
+    procedure: {
+      id: "P-6006",
+      name: "Curativos",
+      items: [
+        { id: "I-013", name: "Bandagem Elástica", quantity: 2 },
+        { id: "I-014", name: "Tesoura Cirúrgica", quantity: 1 }
+      ]
+    },
+    timestamp: new Date(Date.now() - 4320 * 60000).toISOString()
+  },
+  {
+    employeeId: "F-1234",
+    employeeName: "Dr. Fernando Alves",
+    procedure: {
+      id: "P-7007",
+      name: "Consulta",
+      items: [
+        { id: "I-015", name: "Estetoscópio", quantity: 1 }
+      ]
+    },
+    timestamp: new Date(Date.now() - 10080 * 60000).toISOString()
+  }
 ];
 
+// Função para converter o novo formato para o formato antigo
+const convertToHistoricoData = (withdrawals: WithdrawalRecord[]): HistoricoDataItem[] => {
+  return withdrawals.map(record => {
+    const timestamp = new Date(record.timestamp);
+    const items = record.procedure.items;
+    
+    return {
+      funcionarioId: record.employeeId,
+      funcionarioNome: record.employeeName || record.employeeId,
+      item: items[0]?.name || "N/A",
+      itensAdicionais: items.slice(1).map(item => item.name),
+      procedimento: record.procedure.name,
+      horario: timestamp.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+      data: timestamp.toLocaleDateString('pt-BR'),
+      timestamp: timestamp
+    };
+  });
+};
+
+// Função para filtrar dados por período
+const filterByPeriod = (data: HistoricoDataItem[], days: number) => {
+  const now = new Date();
+  const cutoffDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+  return data.filter(item => item.timestamp >= cutoffDate);
+};
+
+// ===== COMPONENTE PRINCIPAL =====
+
 const Relatorios = () => {
-  const [reportsList, setReportsList] = useState(initialReports);
+  const [historicoData, setHistoricoData] = useState<HistoricoDataItem[]>([]);
+  const [reportsList, setReportsList] = useState<Report[]>([]);
   const [open, setOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
-  const [selectedReport, setSelectedReport] = useState(null);
-  const [reportType, setReportType] = useState("");
+  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [month, setMonth] = useState("");
-  const [unit, setUnit] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const { toast } = useToast();
 
-  const handlePreviewReport = (report) => {
+  // Carregar dados da API ou mock
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // ===== INTEGRAÇÃO COM API REAL =====
+        // const response = await fetch('/api/withdrawals');
+        // const data = await response.json();
+        // const converted = convertToHistoricoData(data);
+        
+        // ===== DADOS MOCKADOS =====
+        const converted = convertToHistoricoData(mockWithdrawals);
+        setHistoricoData(converted);
+        
+        // Inicializar relatórios
+        const initialReports = [
+          {
+            title: "Relatório de Retiradas - Últimos 30 dias",
+            date: new Date().toLocaleDateString("pt-BR"),
+            type: "Histórico de Retiradas",
+            periodo: "Últimos 30 dias",
+            retiradas: filterByPeriod(converted, 30),
+          },
+          {
+            title: "Relatório de Retiradas - Últimos 7 dias",
+            date: new Date().toLocaleDateString("pt-BR"),
+            type: "Histórico de Retiradas",
+            periodo: "Últimos 7 dias",
+            retiradas: filterByPeriod(converted, 7),
+          },
+          {
+            title: "Relatório de Retiradas - Últimas 24 horas",
+            date: new Date().toLocaleDateString("pt-BR"),
+            type: "Histórico de Retiradas",
+            periodo: "Últimas 24 horas",
+            retiradas: converted.filter(r => {
+              const now = new Date();
+              const diffHours = (now.getTime() - r.timestamp.getTime()) / 3600000;
+              return diffHours <= 24;
+            }).sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()),
+          },
+        ];
+        
+        setReportsList(initialReports);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    };
+    
+    fetchData();
+  }, []);
+
+  const handlePreviewReport = (report: Report) => {
     setSelectedReport(report);
     setPreviewOpen(true);
   };
 
-  const handleDownloadReport = (report) => {
+  const handleDownloadReport = (report: Report) => {
     const doc = new jsPDF();
     
     // Header
@@ -127,7 +305,7 @@ const Relatorios = () => {
     doc.setFont(undefined, 'normal');
     
     // Table content
-    report.retiradas.forEach((retirada, index) => {
+    report.retiradas.forEach((retirada: HistoricoDataItem) => {
       if (yPosition > 260) {
         doc.addPage();
         yPosition = 20;
@@ -201,7 +379,7 @@ const Relatorios = () => {
       return;
     }
 
-    const periodLabels = {
+    const periodLabels: { [key: string]: string } = {
       "30min": "Últimos 30 minutos",
       "1hora": "Última hora",
       "24horas": "Últimas 24 horas",
@@ -254,7 +432,7 @@ const Relatorios = () => {
         // Filtragem por período customizado
         const start = new Date(startDate);
         const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999); // Inclui o dia inteiro
+        end.setHours(23, 59, 59, 999);
         
         filteredRetiradas = historicoData.filter(r => {
           return r.timestamp >= start && r.timestamp <= end;
@@ -347,7 +525,7 @@ const Relatorios = () => {
                     <span className="text-sm font-medium text-gray-600">Funcionários</span>
                   </div>
                   <p className="text-2xl font-bold text-gray-900">
-                    {new Set(selectedReport.retiradas.map(r => r.funcionarioId)).size}
+                    {new Set(selectedReport.retiradas.map((r: HistoricoDataItem) => r.funcionarioId)).size}
                   </p>
                 </div>
                 
@@ -357,7 +535,7 @@ const Relatorios = () => {
                     <span className="text-sm font-medium text-gray-600">Total de Itens</span>
                   </div>
                   <p className="text-2xl font-bold text-gray-900">
-                    {selectedReport.retiradas.reduce((acc, r) => acc + 1 + r.itensAdicionais.length, 0)}
+                    {selectedReport.retiradas.reduce((acc: number, r: HistoricoDataItem) => acc + 1 + r.itensAdicionais.length, 0)}
                   </p>
                 </div>
                 
@@ -367,7 +545,7 @@ const Relatorios = () => {
                     <span className="text-sm font-medium text-gray-600">Procedimentos</span>
                   </div>
                   <p className="text-2xl font-bold text-gray-900">
-                    {new Set(selectedReport.retiradas.map(r => r.procedimento)).size}
+                    {new Set(selectedReport.retiradas.map((r: HistoricoDataItem) => r.procedimento)).size}
                   </p>
                 </div>
               </div>
@@ -388,7 +566,7 @@ const Relatorios = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y bg-white">
-                      {selectedReport.retiradas.map((retirada, index) => (
+                      {selectedReport.retiradas.map((retirada: HistoricoDataItem, index: number) => (
                         <tr key={index} className="hover:bg-muted/50">
                           <td className="px-4 py-3">
                             <div>
