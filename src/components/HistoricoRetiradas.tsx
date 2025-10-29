@@ -296,7 +296,7 @@ export function HistoricoRetiradas() {
                               <p className="text-sm font-semibold text-foreground mb-2">Setor:</p>
                               <p className="text-sm text-muted-foreground">{registro.setor}</p>
                               <p className="text-sm font-semibold text-foreground mb-2 mt-3">ID do Procedimento:</p>
-                              <p className="text-sm text-muted-foreground font-mono">{registro.procedure.id.slice(0, 13)}...</p>
+                              <p className="text-sm text-muted-foreground font-mono">{registro.procedure.id.slice(0, 13)}</p>
                             </div>
                           </div>
                           <div>

@@ -91,7 +91,7 @@ function SensorsCard({ data, onRefresh, loading }: {
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-lg font-semibold text-card-foreground">Sensores em Tempo Real</h3>
         <Button 
-          className=" hover:bg-blue-400"
+          className="hover:bg-blue-400"
           onClick={onRefresh} 
           variant="outline" 
           size="sm"
@@ -188,10 +188,10 @@ export default function Dashboard() {
   useEffect(() => {
     fetchAllData();
 
-    // Atualizar automaticamente a cada 30 segundos
+    // Atualizar automaticamente a cada 10 segundos
     const interval = setInterval(() => {
       fetchAllData();
-    }, 30000);
+    }, 10000);
 
     return () => clearInterval(interval);
   }, []);
