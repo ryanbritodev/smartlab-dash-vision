@@ -1,7 +1,8 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Download, Calendar, Eye, User, Package, Clock } from "lucide-react";
+import { FileText, Download, Calendar, Eye, User, Package, Clock, RefreshCw } from "lucide-react";
 import { useState, useEffect } from "react";
+import { getTransactionsData } from "@/components/HistoricoRetiradas";
 import {
   Dialog,
   DialogContent,
@@ -22,37 +23,29 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
 
-// ===== TIPOS E INTERFACES =====
-
-interface ProcedureItem {
-  id: string;
-  name: string;
-  quantity: number;
-}
-
-interface Procedure {
-  id: string;
-  name: string;
-  items: ProcedureItem[];
-}
-
-interface WithdrawalRecord {
+// Tipos para as transações enriquecidas
+interface EnrichedTransaction {
   employeeId: string;
-  employeeName?: string;
-  procedure: Procedure;
+  procedure: {
+    id: string;
+    name: string;
+    items: Array<{
+      id: string;
+      name: string;
+      quantity: number;
+    }>;
+  };
   timestamp: string;
-}
-
-// Tipo adaptado para compatibilidade com o formato antigo
-interface HistoricoDataItem {
   funcionarioId: string;
-  funcionarioNome: string;
+  funcionarioNome?: string;
   item: string;
   itensAdicionais: string[];
   procedimento: string;
   horario: string;
   data: string;
-  timestamp: Date;
+  observacoes: string;
+  setor: string;
+  timestampDate: Date;
 }
 
 interface Report {
@@ -60,136 +53,10 @@ interface Report {
   date: string;
   type: string;
   periodo: string;
-  retiradas: HistoricoDataItem[];
+  retiradas: EnrichedTransaction[];
 }
 
-// ===== DADOS MOCKADOS =====
-
-const mockWithdrawals: WithdrawalRecord[] = [
-  {
-    employeeId: "F-2341",
-    employeeName: "Dr. João Silva",
-    procedure: {
-      id: "P-1001",
-      name: "Cirurgia Cardíaca",
-      items: [
-        { id: "I-001", name: "Luvas Cirúrgicas", quantity: 2 },
-        { id: "I-002", name: "Máscara N95", quantity: 1 },
-        { id: "I-003", name: "Álcool Gel", quantity: 1 }
-      ]
-    },
-    timestamp: new Date(Date.now() - 15 * 60000).toISOString()
-  },
-  {
-    employeeId: "F-1892",
-    employeeName: "Enf. Maria Santos",
-    procedure: {
-      id: "P-2002",
-      name: "Coleta de Sangue",
-      items: [
-        { id: "I-004", name: "Seringa 10ml", quantity: 3 }
-      ]
-    },
-    timestamp: new Date(Date.now() - 45 * 60000).toISOString()
-  },
-  {
-    employeeId: "F-3021",
-    employeeName: "Dr. Pedro Costa",
-    procedure: {
-      id: "P-3003",
-      name: "Cateterismo",
-      items: [
-        { id: "I-005", name: "Cateter", quantity: 1 },
-        { id: "I-006", name: "Gaze Estéril", quantity: 5 },
-        { id: "I-007", name: "Esparadrapo", quantity: 1 }
-      ]
-    },
-    timestamp: new Date(Date.now() - 180 * 60000).toISOString()
-  },
-  {
-    employeeId: "F-2156",
-    employeeName: "Enf. Ana Paula",
-    procedure: {
-      id: "P-4004",
-      name: "Triagem",
-      items: [
-        { id: "I-008", name: "Termômetro Digital", quantity: 1 }
-      ]
-    },
-    timestamp: new Date(Date.now() - 720 * 60000).toISOString()
-  },
-  {
-    employeeId: "F-2789",
-    employeeName: "Dr. Carlos Oliveira",
-    procedure: {
-      id: "P-5005",
-      name: "UTI - Emergência",
-      items: [
-        { id: "I-009", name: "Kit Intubação", quantity: 1 },
-        { id: "I-010", name: "Tubo Endotraqueal", quantity: 1 },
-        { id: "I-011", name: "Laringoscópio", quantity: 1 },
-        { id: "I-012", name: "Fio Guia", quantity: 1 }
-      ]
-    },
-    timestamp: new Date(Date.now() - 2880 * 60000).toISOString()
-  },
-  {
-    employeeId: "F-3456",
-    employeeName: "Enf. Roberto Lima",
-    procedure: {
-      id: "P-6006",
-      name: "Curativos",
-      items: [
-        { id: "I-013", name: "Bandagem Elástica", quantity: 2 },
-        { id: "I-014", name: "Tesoura Cirúrgica", quantity: 1 }
-      ]
-    },
-    timestamp: new Date(Date.now() - 4320 * 60000).toISOString()
-  },
-  {
-    employeeId: "F-1234",
-    employeeName: "Dr. Fernando Alves",
-    procedure: {
-      id: "P-7007",
-      name: "Consulta",
-      items: [
-        { id: "I-015", name: "Estetoscópio", quantity: 1 }
-      ]
-    },
-    timestamp: new Date(Date.now() - 10080 * 60000).toISOString()
-  }
-];
-
-// Função para converter o novo formato para o formato antigo
-const convertToHistoricoData = (withdrawals: WithdrawalRecord[]): HistoricoDataItem[] => {
-  return withdrawals.map(record => {
-    const timestamp = new Date(record.timestamp);
-    const items = record.procedure.items;
-    
-    return {
-      funcionarioId: record.employeeId,
-      funcionarioNome: record.employeeName || record.employeeId,
-      item: items[0]?.name || "N/A",
-      itensAdicionais: items.slice(1).map(item => item.name),
-      procedimento: record.procedure.name,
-      horario: timestamp.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-      data: timestamp.toLocaleDateString('pt-BR'),
-      timestamp: timestamp
-    };
-  });
-};
-
-// Função para filtrar dados por período
-const filterByPeriod = (data: HistoricoDataItem[], days: number) => {
-  const now = new Date();
-  const cutoffDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
-  return data.filter(item => item.timestamp >= cutoffDate);
-};
-
-// ===== COMPONENTE PRINCIPAL =====
-
 const Relatorios = () => {
-  const [historicoData, setHistoricoData] = useState<HistoricoDataItem[]>([]);
   const [reportsList, setReportsList] = useState<Report[]>([]);
   const [open, setOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -197,58 +64,66 @@ const Relatorios = () => {
   const [month, setMonth] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  // Carregar dados da API ou mock
+  // Carregar relatórios iniciais ao montar o componente
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // ===== INTEGRAÇÃO COM API REAL =====
-        // const response = await fetch('/api/withdrawals');
-        // const data = await response.json();
-        // const converted = convertToHistoricoData(data);
-        
-        // ===== DADOS MOCKADOS =====
-        const converted = convertToHistoricoData(mockWithdrawals);
-        setHistoricoData(converted);
-        
-        // Inicializar relatórios
-        const initialReports = [
-          {
-            title: "Relatório de Retiradas - Últimos 30 dias",
-            date: new Date().toLocaleDateString("pt-BR"),
-            type: "Histórico de Retiradas",
-            periodo: "Últimos 30 dias",
-            retiradas: filterByPeriod(converted, 30),
-          },
-          {
-            title: "Relatório de Retiradas - Últimos 7 dias",
-            date: new Date().toLocaleDateString("pt-BR"),
-            type: "Histórico de Retiradas",
-            periodo: "Últimos 7 dias",
-            retiradas: filterByPeriod(converted, 7),
-          },
-          {
-            title: "Relatório de Retiradas - Últimas 24 horas",
-            date: new Date().toLocaleDateString("pt-BR"),
-            type: "Histórico de Retiradas",
-            periodo: "Últimas 24 horas",
-            retiradas: converted.filter(r => {
-              const now = new Date();
-              const diffHours = (now.getTime() - r.timestamp.getTime()) / 3600000;
-              return diffHours <= 24;
-            }).sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()),
-          },
-        ];
-        
-        setReportsList(initialReports);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      }
-    };
-    
-    fetchData();
+    loadInitialReports();
   }, []);
+
+  const loadInitialReports = async () => {
+    setLoading(true);
+    try {
+      const transactions = await getTransactionsData();
+      
+      const now = new Date();
+      
+      const reports: Report[] = [
+        {
+          title: "Relatório de Retiradas - Últimos 30 dias",
+          date: new Date().toLocaleDateString("pt-BR"),
+          type: "Histórico de Retiradas",
+          periodo: "Últimos 30 dias",
+          retiradas: transactions.filter(r => {
+            const diffDays = (now.getTime() - r.timestampDate.getTime()) / 86400000;
+            return diffDays <= 30;
+          }),
+        },
+        {
+          title: "Relatório de Retiradas - Últimos 7 dias",
+          date: new Date().toLocaleDateString("pt-BR"),
+          type: "Histórico de Retiradas",
+          periodo: "Últimos 7 dias",
+          retiradas: transactions.filter(r => {
+            const diffDays = (now.getTime() - r.timestampDate.getTime()) / 86400000;
+            return diffDays <= 7;
+          }),
+        },
+        {
+          title: "Relatório de Retiradas - Últimas 24 horas",
+          date: new Date().toLocaleDateString("pt-BR"),
+          type: "Histórico de Retiradas",
+          periodo: "Últimas 24 horas",
+          retiradas: transactions.filter(r => {
+            const diffHours = (now.getTime() - r.timestampDate.getTime()) / 3600000;
+            return diffHours <= 24;
+          }),
+        },
+      ];
+      
+      setReportsList(reports);
+    } catch (error) {
+      console.error('Erro ao carregar relatórios iniciais:', error);
+      toast({
+        title: "Erro ao carregar relatórios",
+        description: "Não foi possível carregar os relatórios iniciais.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handlePreviewReport = (report: Report) => {
     setSelectedReport(report);
@@ -305,7 +180,7 @@ const Relatorios = () => {
     doc.setFont(undefined, 'normal');
     
     // Table content
-    report.retiradas.forEach((retirada: HistoricoDataItem) => {
+    report.retiradas.forEach((retirada, index) => {
       if (yPosition > 260) {
         doc.addPage();
         yPosition = 20;
@@ -359,7 +234,7 @@ const Relatorios = () => {
     });
   };
 
-  const handleGenerateReport = () => {
+  const handleGenerateReport = async () => {
     if (!month) {
       toast({
         title: "Campo obrigatório",
@@ -379,91 +254,102 @@ const Relatorios = () => {
       return;
     }
 
-    const periodLabels: { [key: string]: string } = {
-      "30min": "Últimos 30 minutos",
-      "1hora": "Última hora",
-      "24horas": "Últimas 24 horas",
-      "7dias": "Últimos 7 dias",
-      "30dias": "Últimos 30 dias",
-      "personalizado": "Período Personalizado"
-    };
-    
-    // Filtragem dinâmica baseada em timestamps reais
-    const now = new Date();
-    let filteredRetiradas = [...historicoData];
-    
-    switch(month) {
-      case "30min": {
-        filteredRetiradas = historicoData.filter(r => {
-          const diffMinutes = (now.getTime() - r.timestamp.getTime()) / 60000;
-          return diffMinutes <= 30;
-        });
-        break;
+    setLoading(true);
+
+    try {
+      const transactions = await getTransactionsData();
+      
+      const periodLabels: Record<string, string> = {
+        "30min": "Últimos 30 minutos",
+        "1hora": "Última hora",
+        "24horas": "Últimas 24 horas",
+        "7dias": "Últimos 7 dias",
+        "30dias": "Últimos 30 dias",
+        "personalizado": "Período Personalizado"
+      };
+      
+      // Filtragem dinâmica baseada em timestamps reais
+      const now = new Date();
+      let filteredRetiradas = [...transactions];
+      
+      switch(month) {
+        case "30min":
+          filteredRetiradas = transactions.filter(r => {
+            const diffMinutes = (now.getTime() - r.timestampDate.getTime()) / 60000;
+            return diffMinutes <= 30;
+          });
+          break;
+        case "1hora":
+          filteredRetiradas = transactions.filter(r => {
+            const diffMinutes = (now.getTime() - r.timestampDate.getTime()) / 60000;
+            return diffMinutes <= 60;
+          });
+          break;
+        case "24horas":
+          filteredRetiradas = transactions.filter(r => {
+            const diffHours = (now.getTime() - r.timestampDate.getTime()) / 3600000;
+            return diffHours <= 24;
+          });
+          break;
+        case "7dias":
+          filteredRetiradas = transactions.filter(r => {
+            const diffDays = (now.getTime() - r.timestampDate.getTime()) / 86400000;
+            return diffDays <= 7;
+          });
+          break;
+        case "30dias":
+          filteredRetiradas = transactions.filter(r => {
+            const diffDays = (now.getTime() - r.timestampDate.getTime()) / 86400000;
+            return diffDays <= 30;
+          });
+          break;
+        case "personalizado": {
+          // Filtragem por período customizado
+          const start = new Date(startDate);
+          const end = new Date(endDate);
+          end.setHours(23, 59, 59, 999);
+          
+          filteredRetiradas = transactions.filter(r => {
+            return r.timestampDate >= start && r.timestampDate <= end;
+          });
+          break;
+        }
       }
-      case "1hora": {
-        filteredRetiradas = historicoData.filter(r => {
-          const diffMinutes = (now.getTime() - r.timestamp.getTime()) / 60000;
-          return diffMinutes <= 60;
-        });
-        break;
-      }
-      case "24horas": {
-        filteredRetiradas = historicoData.filter(r => {
-          const diffHours = (now.getTime() - r.timestamp.getTime()) / 3600000;
-          return diffHours <= 24;
-        });
-        break;
-      }
-      case "7dias": {
-        filteredRetiradas = historicoData.filter(r => {
-          const diffDays = (now.getTime() - r.timestamp.getTime()) / 86400000;
-          return diffDays <= 7;
-        });
-        break;
-      }
-      case "30dias": {
-        filteredRetiradas = historicoData.filter(r => {
-          const diffDays = (now.getTime() - r.timestamp.getTime()) / 86400000;
-          return diffDays <= 30;
-        });
-        break;
-      }
-      case "personalizado": {
-        // Filtragem por período customizado
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999);
-        
-        filteredRetiradas = historicoData.filter(r => {
-          return r.timestamp >= start && r.timestamp <= end;
-        });
-        break;
-      }
+      
+      const newReport: Report = {
+        title: `Relatório de Retiradas - ${periodLabels[month]}`,
+        date: new Date().toLocaleDateString("pt-BR"),
+        type: "Histórico de Retiradas",
+        periodo: month === "personalizado" 
+          ? `${new Date(startDate).toLocaleDateString("pt-BR")} - ${new Date(endDate).toLocaleDateString("pt-BR")}`
+          : periodLabels[month],
+        retiradas: filteredRetiradas,
+      };
+      
+      setReportsList([newReport, ...reportsList]);
+      setOpen(false);
+      setMonth("");
+      setStartDate("");
+      setEndDate("");
+      
+      toast({
+        title: "Relatório gerado!",
+        description: `${filteredRetiradas.length} retirada(s) encontrada(s) no período selecionado.`,
+      });
+    } catch (error) {
+      console.error('Erro ao gerar relatório:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      
+      toast({
+        title: "Erro ao gerar relatório",
+        description: errorMessage.includes('Failed to fetch') 
+          ? "Não foi possível conectar à API. Verifique sua conexão."
+          : "Não foi possível gerar o relatório. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
-    
-    // Ordena por timestamp mais recente primeiro
-    filteredRetiradas.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-    
-    const newReport = {
-      title: `Relatório de Retiradas - ${periodLabels[month]}`,
-      date: new Date().toLocaleDateString("pt-BR"),
-      type: "Histórico de Retiradas",
-      periodo: month === "personalizado" 
-        ? `${new Date(startDate).toLocaleDateString("pt-BR")} - ${new Date(endDate).toLocaleDateString("pt-BR")}`
-        : periodLabels[month],
-      retiradas: filteredRetiradas,
-    };
-    
-    setReportsList([newReport, ...reportsList]);
-    setOpen(false);
-    setMonth("");
-    setStartDate("");
-    setEndDate("");
-    
-    toast({
-      title: "Relatório gerado!",
-      description: `${filteredRetiradas.length} retirada(s) encontrada(s) no período selecionado.`,
-    });
   };
 
   const PreviewDialog = () => (
@@ -525,7 +411,7 @@ const Relatorios = () => {
                     <span className="text-sm font-medium text-gray-600">Funcionários</span>
                   </div>
                   <p className="text-2xl font-bold text-gray-900">
-                    {new Set(selectedReport.retiradas.map((r: HistoricoDataItem) => r.funcionarioId)).size}
+                    {new Set(selectedReport.retiradas.map(r => r.funcionarioId)).size}
                   </p>
                 </div>
                 
@@ -535,7 +421,7 @@ const Relatorios = () => {
                     <span className="text-sm font-medium text-gray-600">Total de Itens</span>
                   </div>
                   <p className="text-2xl font-bold text-gray-900">
-                    {selectedReport.retiradas.reduce((acc: number, r: HistoricoDataItem) => acc + 1 + r.itensAdicionais.length, 0)}
+                    {selectedReport.retiradas.reduce((acc, r) => acc + 1 + r.itensAdicionais.length, 0)}
                   </p>
                 </div>
                 
@@ -545,7 +431,7 @@ const Relatorios = () => {
                     <span className="text-sm font-medium text-gray-600">Procedimentos</span>
                   </div>
                   <p className="text-2xl font-bold text-gray-900">
-                    {new Set(selectedReport.retiradas.map((r: HistoricoDataItem) => r.procedimento)).size}
+                    {new Set(selectedReport.retiradas.map(r => r.procedimento)).size}
                   </p>
                 </div>
               </div>
@@ -566,7 +452,7 @@ const Relatorios = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y bg-white">
-                      {selectedReport.retiradas.map((retirada: HistoricoDataItem, index: number) => (
+                      {selectedReport.retiradas.map((retirada, index) => (
                         <tr key={index} className="hover:bg-muted/50">
                           <td className="px-4 py-3">
                             <div>
@@ -633,125 +519,162 @@ const Relatorios = () => {
           <p className="text-muted-foreground">Acesse, visualize e baixe relatórios detalhados do sistema</p>
         </div>
         
-       {/* Diálogo de Gerar Novo Relatório */}
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger asChild>
-          <Button size="lg" className="gap-2">
-            <FileText className="h-5 w-5" />
-            Gerar Novo Relatório
+        <div className="flex gap-2">
+          <Button 
+            className="hover:bg-blue-400"
+            onClick={loadInitialReports} 
+            variant="outline" 
+            size="lg"
+            disabled={loading}
+          >
+            <RefreshCw className={`h-5 w-5 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Atualizar
           </Button>
-        </DialogTrigger>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Gerar Novo Relatório</DialogTitle>
-            <DialogDescription>
-              Preencha os campos abaixo para gerar um novo relatório do sistema.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="period">Período Temporal</Label>
-              <Select value={month} onValueChange={setMonth}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o período" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="30min">Últimos 30 minutos</SelectItem>
-                  <SelectItem value="1hora">Última hora</SelectItem>
-                  <SelectItem value="24horas">Últimas 24 horas</SelectItem>
-                  <SelectItem value="7dias">Últimos 7 dias</SelectItem>
-                  <SelectItem value="30dias">Últimos 30 dias</SelectItem>
-                  <SelectItem value="personalizado">Período Personalizado</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {month === "personalizado" && (
-              <div className="grid grid-cols-2 gap-4">
+          
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button size="lg" className="gap-2">
+                <FileText className="h-5 w-5" />
+                Gerar Novo Relatório
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>Gerar Novo Relatório</DialogTitle>
+                <DialogDescription>
+                  Preencha os campos abaixo para gerar um novo relatório do sistema.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
                 <div className="space-y-2">
-                  <Label htmlFor="startDate">Data Início</Label>
-                  <Input 
-                    type="date" 
-                    id="startDate" 
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                  />
+                  <Label htmlFor="period">Período Temporal</Label>
+                  <Select value={month} onValueChange={setMonth}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o período" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="30min">Últimos 30 minutos</SelectItem>
+                      <SelectItem value="1hora">Última hora</SelectItem>
+                      <SelectItem value="24horas">Últimas 24 horas</SelectItem>
+                      <SelectItem value="7dias">Últimos 7 dias</SelectItem>
+                      <SelectItem value="30dias">Últimos 30 dias</SelectItem>
+                      <SelectItem value="personalizado">Período Personalizado</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="endDate">Data Fim</Label>
-                  <Input 
-                    type="date" 
-                    id="endDate" 
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                  />
-                </div>
+                {month === "personalizado" && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="startDate">Data Início</Label>
+                      <Input 
+                        type="date" 
+                        id="startDate" 
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="endDate">Data Fim</Label>
+                      <Input 
+                        type="date" 
+                        id="endDate" 
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-          <div className="flex justify-end gap-3">
-            <Button 
-              variant="outline" 
-              className="hover:bg-gray-100 hover:text-gray-900"
-              onClick={() => setOpen(false)}
-            >
-              Cancelar
-            </Button>
-            <Button 
-              className="bg-primary hover:bg-primary/90"
-              onClick={handleGenerateReport}
-            >
-              Gerar Relatório
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+              <div className="flex justify-end gap-3">
+                <Button 
+                  variant="outline" 
+                  className="hover:bg-gray-100 hover:text-gray-900"
+                  onClick={() => setOpen(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button 
+                  className="bg-primary hover:bg-primary/90"
+                  onClick={handleGenerateReport}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Gerando...
+                    </>
+                  ) : (
+                    'Gerar Relatório'
+                  )}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <PreviewDialog />
 
       <div className="grid grid-cols-1 gap-4">
-        {reportsList.map((report, index) => (
-          <Card key={index} className="p-6 hover:shadow-lg transition-shadow">
-            <div className="flex items-center justify-between">
-              <div className="flex items-start gap-4">
-                <div className="p-3 bg-primary/10 rounded-lg">
-                  <FileText className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-card-foreground mb-1">{report.title}</h3>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-4 w-4" />
-                      <span>{report.date}</span>
-                    </div>
-                    <span>•</span>
-                    <span>{report.type}</span>
-                    <span>•</span>
-                    <span>{report.retiradas.length} retiradas</span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button 
-                  variant="outline" 
-                  className="gap-2 hover:bg-primary/10 hover:text-primary border-border"
-                  onClick={() => handlePreviewReport(report)}
-                >
-                  <Eye className="h-4 w-4" />
-                  Visualizar
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="gap-2 hover:bg-primary/10 hover:text-primary border-border" 
-                  onClick={() => handleDownloadReport(report)}
-                >
-                  <Download className="h-4 w-4" />
-                  Baixar
-                </Button>
-              </div>
+        {loading && reportsList.length === 0 ? (
+          <Card className="p-12">
+            <div className="flex items-center justify-center">
+              <RefreshCw className="h-8 w-8 animate-spin text-primary mr-3" />
+              <span className="text-lg text-muted-foreground">Carregando relatórios...</span>
             </div>
           </Card>
-        ))}
+        ) : reportsList.length === 0 ? (
+          <Card className="p-12">
+            <div className="flex flex-col items-center justify-center">
+              <FileText className="h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold text-foreground mb-2">Nenhum relatório disponível</h3>
+              <p className="text-sm text-muted-foreground">Gere um novo relatório para começar.</p>
+            </div>
+          </Card>
+        ) : (
+          reportsList.map((report, index) => (
+            <Card key={index} className="p-6 hover:shadow-lg transition-shadow">
+              <div className="flex items-center justify-between">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-primary/10 rounded-lg">
+                    <FileText className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-card-foreground mb-1">{report.title}</h3>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-4 w-4" />
+                        <span>{report.date}</span>
+                      </div>
+                      <span>•</span>
+                      <span>{report.type}</span>
+                      <span>•</span>
+                      <span>{report.retiradas.length} retiradas</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    className="gap-2 hover:bg-primary/10 hover:text-primary border-border"
+                    onClick={() => handlePreviewReport(report)}
+                  >
+                    <Eye className="h-4 w-4" />
+                    Visualizar
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="gap-2 hover:bg-primary/10 hover:text-primary border-border" 
+                    onClick={() => handleDownloadReport(report)}
+                  >
+                    <Download className="h-4 w-4" />
+                    Baixar
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          ))
+        )}
       </div>
     </div>
   );
