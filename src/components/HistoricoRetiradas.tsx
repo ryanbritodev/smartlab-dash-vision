@@ -43,10 +43,69 @@ interface EnrichedTransaction extends Transaction {
   timestampDate: Date;
 }
 
-// Mapeamento temporário de funcionários
-const employeeNames: Record<string, string> = {
-  "3cfba964-545e-4e68-adaa-867ab2b0d155": "Dr. João Silva",
-  // Adicione mais mapeamentos conforme necessário
+// Lista de nomes disponíveis para atribuição aleatória
+const availableDoctorNames = [
+  "Dr. João Silva",
+  "Dra. Maria Santos",
+  "Dr. Carlos Oliveira",
+  "Dra. Ana Paula Costa",
+  "Dr. Pedro Henrique Lima",
+  "Dra. Juliana Ferreira",
+  "Dr. Roberto Almeida",
+  "Dra. Camila Rodrigues",
+  "Dr. Fernando Martins",
+  "Dra. Patrícia Souza",
+  "Dr. Ricardo Barbosa",
+  "Dra. Beatriz Cardoso",
+  "Dr. Marcos Vieira",
+  "Dra. Renata Campos",
+  "Dr. Leonardo Pereira",
+  "Dra. Sandra Moreira",
+  "Dr. Gustavo Ribeiro",
+  "Dra. Luciana Monteiro",
+  "Dr. André Carvalho",
+  "Dra. Fernanda Nascimento",
+  "Dr. Rafael Costa",
+  "Dra. Mariana Alves",
+  "Dr. Bruno Teixeira",
+  "Dra. Larissa Gomes",
+  "Dr. Thiago Mendes",
+  "Dra. Gabriela Rocha",
+  "Dr. Felipe Araújo",
+  "Dra. Carolina Freitas",
+  "Dr. Diego Soares",
+  "Dra. Isabela Correia",
+];
+
+// Cache de mapeamento de IDs para nomes (mantido durante a sessão)
+const employeeNames: Record<string, string> = {};
+
+// Função para obter ou atribuir um nome para um employeeId
+const getEmployeeName = (employeeId: string): string => {
+  // Se já existe um nome atribuído, retorna ele
+  if (employeeNames[employeeId]) {
+    return employeeNames[employeeId];
+  }
+  
+  // Pega os nomes já usados
+  const usedNames = Object.values(employeeNames);
+  
+  // Encontra nomes ainda não utilizados
+  const availableNames = availableDoctorNames.filter(name => !usedNames.includes(name));
+  
+  // Se ainda há nomes disponíveis, escolhe um aleatório
+  if (availableNames.length > 0) {
+    const randomIndex = Math.floor(Math.random() * availableNames.length);
+    const selectedName = availableNames[randomIndex];
+    employeeNames[employeeId] = selectedName;
+    return selectedName;
+  }
+  
+  // Se todos os nomes foram usados, reutiliza um aleatório
+  const randomIndex = Math.floor(Math.random() * availableDoctorNames.length);
+  const selectedName = availableDoctorNames[randomIndex];
+  employeeNames[employeeId] = selectedName;
+  return selectedName;
 };
 
 export function HistoricoRetiradas() {
@@ -74,7 +133,7 @@ export function HistoricoRetiradas() {
         return {
           ...transaction,
           funcionarioId: transaction.employeeId.slice(0, 8),
-          funcionarioNome: employeeNames[transaction.employeeId] || `Funcionário ${transaction.employeeId.slice(0, 8)}`,
+          funcionarioNome: getEmployeeName(transaction.employeeId),
           item: items[0]?.name || "Item não especificado",
           itensAdicionais: items.slice(1).map(item => item.name),
           procedimento: transaction.procedure.name,
@@ -105,7 +164,7 @@ export function HistoricoRetiradas() {
         return {
           ...transaction,
           funcionarioId: transaction.employeeId.slice(0, 8),
-          funcionarioNome: employeeNames[transaction.employeeId] || `Funcionário ${transaction.employeeId.slice(0, 8)}`,
+          funcionarioNome: getEmployeeName(transaction.employeeId),
           item: items[0]?.name || "Item não especificado",
           itensAdicionais: items.slice(1).map(item => item.name),
           procedimento: transaction.procedure.name,
@@ -330,7 +389,7 @@ export const getTransactionsData = async (): Promise<EnrichedTransaction[]> => {
       return {
         ...transaction,
         funcionarioId: transaction.employeeId.slice(0, 8),
-        funcionarioNome: employeeNames[transaction.employeeId] || `Funcionário ${transaction.employeeId.slice(0, 8)}`,
+        funcionarioNome: getEmployeeName(transaction.employeeId),
         item: items[0]?.name || "Item não especificado",
         itensAdicionais: items.slice(1).map(item => item.name),
         procedimento: transaction.procedure.name,
@@ -354,7 +413,7 @@ export const getTransactionsData = async (): Promise<EnrichedTransaction[]> => {
       return {
         ...transaction,
         funcionarioId: transaction.employeeId.slice(0, 8),
-        funcionarioNome: employeeNames[transaction.employeeId] || `Funcionário ${transaction.employeeId.slice(0, 8)}`,
+        funcionarioNome: getEmployeeName(transaction.employeeId),
         item: items[0]?.name || "Item não especificado",
         itensAdicionais: items.slice(1).map(item => item.name),
         procedimento: transaction.procedure.name,
